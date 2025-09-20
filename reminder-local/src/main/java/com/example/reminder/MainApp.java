@@ -15,6 +15,7 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) {
+        Platform.setImplicitExit(false);
         // 啟動主視窗 (提醒管理器)
         ReminderManager manager = new ReminderManager();
         try {
@@ -45,8 +46,6 @@ public class MainApp extends Application {
     }
 
     public static void main(String[] args) {
-        // 避免第一次關掉 popup 就退出
-        Platform.startup(() -> Platform.setImplicitExit(false));
         launch(args);
     }
 }
