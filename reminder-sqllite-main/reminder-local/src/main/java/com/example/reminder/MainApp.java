@@ -71,7 +71,7 @@ public class MainApp extends Application {
         PopupMenu popup = new PopupMenu();
 
         // 打開視窗
-        MenuItem openItem = new MenuItem("打開");
+        MenuItem openItem = new MenuItem("Open");
         openItem.addActionListener(e -> Platform.runLater(() -> {
             if (mainStage != null) {
                 mainStage.show();
@@ -81,7 +81,7 @@ public class MainApp extends Application {
         popup.add(openItem);
 
         // 退出程式
-        MenuItem exitItem = new MenuItem("退出");
+        MenuItem exitItem = new MenuItem("Quit");
         exitItem.addActionListener(e -> {
             stopApp();
         });
@@ -124,3 +124,4 @@ public class MainApp extends Application {
         System.exit(0);
     }
 }
+
