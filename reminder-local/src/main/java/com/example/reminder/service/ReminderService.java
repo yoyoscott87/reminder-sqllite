@@ -3,29 +3,36 @@ package com.example.reminder.service;
 import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import com.example.reminder.dao.Database;
 import com.example.reminder.ui.ReminderPopup;
 
 public class ReminderService {
+    // 當前時間窗防抖 (避免同一分鐘多次跳)
     private static final Set<String> remindedToday = new HashSet<>();
+    // 每天只提醒一次 (同一個提醒 ID)
+    private static final Map<String, Integer> remindCountToday = new HashMap<>();
+
     private static LocalDate lastCheckedDate = LocalDate.now();
 
-    /**
-     * 核心檢查方法：從 SQLite 讀取 reminders 表，逐一判斷是否需要提醒
-     */
+    private static final DateTimeFormatter ONCE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter DAILY_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
     public void checkAndNotify() {
-        // 每天凌晨清空記錄
+        // 跨日清空
         if (!LocalDate.now().equals(lastCheckedDate)) {
             remindedToday.clear();
+            remindCountToday.clear();
             lastCheckedDate = LocalDate.now();
         }
 
         LocalDateTime now = LocalDateTime.now();
-        LocalTime nowOnlyTime = LocalTime.now();
-        DayOfWeek today = LocalDate.now().getDayOfWeek();
+        LocalTime nowOnlyTime = now.toLocalTime();
+        DayOfWeek today = now.getDayOfWeek();
 
         String sql = "SELECT id, task, time, days, type FROM reminders";
 
@@ -34,42 +41,41 @@ public class ReminderService {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String timeStr = rs.getString("time").trim();
-                String task = rs.getString("task");
+                long id = rs.getLong("id");
+                String task = safe(rs.getString("task"));
+                String timeStr = safe(rs.getString("time"));
                 String dayStr = rs.getString("days") != null ? rs.getString("days").trim().toUpperCase() : "ALL";
-                String type = rs.getString("type");
+                String type = safe(rs.getString("type")).toLowerCase();
 
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/M/d HH:mm");
                 try {
-                    // 🟢 一次性提醒 (格式 yyyy/M/d HH:mm，不檢查星期)
-                    if ("once".equalsIgnoreCase(type) || timeStr.contains("/")) {
-                        LocalDateTime remindTime = LocalDateTime.parse(timeStr, formatter);
-                        long diff = Duration.between(remindTime, now).toMinutes();
+                    if ("once".equals(type)) {
+                        LocalDateTime remindTime = LocalDateTime.parse(timeStr, ONCE_FORMATTER);
+                        long diffMin = Duration.between(remindTime, now).toMinutes();
 
-                        String key = "ONCE-" + remindTime.toString();
-                        if (Math.abs(diff) <= 1 && !remindedToday.contains(key)) {
+                        String debounceKey = "ONCE-" + id + "-" + remindTime.toString();
+                        String dailyKey = "ONCE-" + id + "-" + LocalDate.now();
+
+                        if (Math.abs(diffMin) <= 1 && shouldNotify(debounceKey, dailyKey)) {
                             ReminderPopup.show("📌 (一次性) " + task);
-                            remindedToday.add(key);
-                        }
-                    }
-                    // 🟢 每日提醒 (格式 HH:mm，要檢查星期)
-                    else {
-                        if (!isDayMatch(dayStr, today)) {
-                            continue; // 星期不符合 → 跳過
+                            markNotified(debounceKey, dailyKey);
                         }
 
-                        LocalTime remindTime = LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm"));
-                        long diff = Duration.between(remindTime, nowOnlyTime).toMinutes();
-                        if (Math.abs(diff) <= 1) {
-                            String key = remindTime.toString() + "-" + LocalDate.now();
-                            if (!remindedToday.contains(key)) {
-                                ReminderPopup.show("📌 (每日) " + task);
-                                remindedToday.add(key);
-                            }
+                    } else if ("daily".equals(type)) {
+                        if (!isDayMatch(dayStr, today)) continue;
+
+                        LocalTime remindTime = LocalTime.parse(timeStr, DAILY_FORMATTER);
+                        long diffMin = Duration.between(remindTime, nowOnlyTime).toMinutes();
+
+                        String debounceKey = "DAILY-" + id + "-" + remindTime + "-" + LocalDate.now();
+                        String dailyKey = "DAILY-" + id + "-" + LocalDate.now();
+
+                        if (Math.abs(diffMin) <= 1 && shouldNotify(debounceKey, dailyKey)) {
+                            ReminderPopup.show("📌 (每日) " + task);
+                            markNotified(debounceKey, dailyKey);
                         }
                     }
-                } catch (Exception e) {
-                    System.out.println("⚠️ 無法解析時間格式: " + timeStr + "，錯誤訊息: " + e.getMessage());
+                } catch (Exception ex) {
+                    System.out.println("⚠️ 無法解析時間格式: " + timeStr + "，錯誤訊息: " + ex.getMessage());
                 }
             }
 
@@ -78,20 +84,34 @@ public class ReminderService {
         }
     }
 
-    /**
-     * 判斷今天是否符合 row 設定的星期
-     */
+    private boolean shouldNotify(String debounceKey, String dailyKey) {
+        // 今天已經提醒過這個 ID → 不再提醒
+        if (remindCountToday.containsKey(dailyKey)) return false;
+        // 同一分鐘內已提醒 → 不再提醒
+        if (remindedToday.contains(debounceKey)) return false;
+        return true;
+    }
+
+    private void markNotified(String debounceKey, String dailyKey) {
+        remindedToday.add(debounceKey);
+        remindCountToday.put(dailyKey, 1);
+    }
+
     private boolean isDayMatch(String dayStr, DayOfWeek today) {
         if (dayStr.equals("ALL")) return true;
         if (dayStr.equals("WEEKDAY")) return today != DayOfWeek.SATURDAY && today != DayOfWeek.SUNDAY;
         if (dayStr.equals("WEEKEND")) return today == DayOfWeek.SATURDAY || today == DayOfWeek.SUNDAY;
 
-        String[] days = dayStr.split(",");
-        for (String d : days) {
-            if (d.trim().equalsIgnoreCase(today.toString())) {
+        String todayAbbr = today.toString().substring(0, 3);
+        for (String d : dayStr.split(",")) {
+            if (d.trim().equalsIgnoreCase(todayAbbr)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private String safe(String s) {
+        return s == null ? "" : s.trim();
     }
 }

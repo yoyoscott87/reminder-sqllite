@@ -1,4 +1,8 @@
-C:\大學\reminder\src\main\java\com\example\reminder\MainApp.java
-C:\大學\reminder\src\main\java\com\example\reminder\ReminderChecker.java
-C:\大學\reminder\src\main\java\com\example\reminder\ReminderPopup.java
-C:\大學\reminder\src\main\java\com\example\reminder\SheetsService.java
+C:\intern\reminder-sqllite-main\reminder-local\src\main\java\com\example\reminder\dao\Database.java
+C:\intern\reminder-sqllite-main\reminder-local\src\main\java\com\example\reminder\dao\ReminderDao.java
+C:\intern\reminder-sqllite-main\reminder-local\src\main\java\com\example\reminder\MainApp.java
+C:\intern\reminder-sqllite-main\reminder-local\src\main\java\com\example\reminder\model\Reminder.java
+C:\intern\reminder-sqllite-main\reminder-local\src\main\java\com\example\reminder\service\ReminderService.java
+C:\intern\reminder-sqllite-main\reminder-local\src\main\java\com\example\reminder\ui\ReminderForm.java
+C:\intern\reminder-sqllite-main\reminder-local\src\main\java\com\example\reminder\ui\ReminderManager.java
+C:\intern\reminder-sqllite-main\reminder-local\src\main\java\com\example\reminder\ui\ReminderPopup.java

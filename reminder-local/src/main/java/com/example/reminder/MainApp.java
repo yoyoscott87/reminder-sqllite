@@ -34,7 +34,7 @@ public class MainApp extends Application {
             public void run() {
                 checker.checkAndNotify(); // ← 這裡會呼叫 ReminderPopup.show()
             }
-        }, 0, 60 * 1000);
+        }, 0, 10 * 1000);
     }
 
     @Override

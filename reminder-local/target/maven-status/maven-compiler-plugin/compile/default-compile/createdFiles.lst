@@ -1,4 +1,9 @@
+com\example\reminder\dao\ReminderDao.class
+com\example\reminder\ui\ReminderForm.class
+com\example\reminder\service\ReminderService.class
+com\example\reminder\MainApp$1.class
 com\example\reminder\MainApp.class
-com\example\reminder\SheetsService.class
-com\example\reminder\ReminderChecker.class
-com\example\reminder\ReminderPopup.class
+com\example\reminder\model\Reminder.class
+com\example\reminder\dao\Database.class
+com\example\reminder\ui\ReminderPopup.class
+com\example\reminder\ui\ReminderManager.class
